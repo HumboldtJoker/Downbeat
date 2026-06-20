@@ -1,0 +1,63 @@
+{
+  "name": "downbeat",
+  "displayName": "Downbeat — Get Paid While AI Thinks",
+  "description": "Privacy-first ad revenue sharing during AI thinking time. Your code stays yours.",
+  "publisher": "liberation-labs",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "downbeat.showEarnings",
+        "title": "Downbeat: Show Earnings"
+      },
+      {
+        "command": "downbeat.toggleAds",
+        "title": "Downbeat: Toggle Ads"
+      }
+    ],
+    "configuration": {
+      "title": "Downbeat",
+      "properties": {
+        "downbeat.apiUrl": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "URL of the Downbeat API server"
+        },
+        "downbeat.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your Downbeat API key for authentication and revenue tracking"
+        },
+        "downbeat.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable ad display during AI thinking time"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.20.0",
+    "vitest": "^1.2.0",
+    "typescript": "^5.3.0"
+  }
+}
