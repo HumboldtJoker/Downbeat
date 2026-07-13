@@ -1,1 +1,8 @@
-node_modules/\ndist/\n.vscode-test/\n*.vsix\n.env\n.env.local
+node_modules/
+dist/
+.vscode-test/
+*.vsix
+.env
+.env.local
+__pycache__/
+*.pyc

@@ -5,7 +5,7 @@
   "publisher": "liberation-labs",
   "version": "0.1.0",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.93.0"
   },
   "categories": [
     "Other"
@@ -23,6 +23,10 @@
       {
         "command": "downbeat.toggleAds",
         "title": "Downbeat: Toggle Ads"
+      },
+      {
+        "command": "downbeat.adClick",
+        "title": "Downbeat: Open Ad"
       }
     ],
     "configuration": {

@@ -1,58 +1,86 @@
 import * as vscode from 'vscode';
-import { VscodeTerminalDetector } from './detection/vscodeDetector';
+import { CompositeDetector } from './detection/compositeDetector';
 import { StatusBarRenderer } from './rendering/statusBarRenderer';
 import { ApiClient } from './api/client';
+import { AdTier, ThinkingEvent } from './detection/types';
 
-let detector: VscodeTerminalDetector | undefined;
+let detector: CompositeDetector | undefined;
 let renderer: StatusBarRenderer | undefined;
 let apiClient: ApiClient | undefined;
 let currentImpressionId: string | undefined;
+let currentTier: AdTier = 'ambient';
+let adFetchAbort: AbortController | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
   const config = vscode.workspace.getConfiguration('downbeat');
   let enabled = config.get<boolean>('enabled', true);
 
-  detector = new VscodeTerminalDetector();
+  detector = new CompositeDetector();
   renderer = new StatusBarRenderer();
   apiClient = new ApiClient();
 
-  // Fetch initial earnings display
   apiClient.fetchEarnings().then((earnings) => {
     renderer?.showEarnings(earnings.today, earnings.total);
   });
 
-  // When AI thinking starts → fetch and display an ad
-  const startSub = detector.onThinkingStart(async () => {
+  const startSub = detector.onThinkingStart(async (event: ThinkingEvent) => {
     if (!enabled || !apiClient || !renderer) {
       return;
     }
 
+    adFetchAbort?.abort();
+    adFetchAbort = new AbortController();
+
     const ad = await apiClient.fetchAd();
-    if (ad) {
+    if (ad && !adFetchAbort.signal.aborted) {
       currentImpressionId = ad.impressionId;
+      currentTier = event.tier;
       renderer.showAd(ad);
     }
   });
 
-  // When AI thinking stops → record the impression, return to earnings
   const stopSub = detector.onThinkingStop(async (durationMs: number) => {
     if (!apiClient || !renderer) {
       return;
     }
 
+    adFetchAbort?.abort();
+    adFetchAbort = undefined;
+
     if (currentImpressionId) {
-      apiClient.recordImpression(currentImpressionId, durationMs);
+      apiClient.recordImpression(
+        currentImpressionId,
+        durationMs,
+        currentTier
+      );
       currentImpressionId = undefined;
     }
 
     renderer.hideAd();
 
-    // Refresh earnings display
     const earnings = await apiClient.fetchEarnings();
     renderer.showEarnings(earnings.today, earnings.total);
   });
 
-  // Command: Show Earnings
+  // Click-through: record the click, then open the URL (fixes F4)
+  const adClickCmd = vscode.commands.registerCommand(
+    'downbeat.adClick',
+    async (url: string) => {
+      if (currentImpressionId && apiClient) {
+        apiClient.recordImpression(
+          currentImpressionId,
+          0,
+          currentTier,
+          true
+        );
+      }
+
+      if (url && url.startsWith('https://')) {
+        await vscode.env.openExternal(vscode.Uri.parse(url));
+      }
+    }
+  );
+
   const showEarningsCmd = vscode.commands.registerCommand(
     'downbeat.showEarnings',
     async () => {
@@ -69,7 +97,6 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   );
 
-  // Command: Toggle Ads
   const toggleAdsCmd = vscode.commands.registerCommand(
     'downbeat.toggleAds',
     async () => {
@@ -84,6 +111,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
       if (!enabled) {
         renderer?.hideAd();
+        adFetchAbort?.abort();
         currentImpressionId = undefined;
       }
     }
@@ -92,6 +120,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     startSub,
     stopSub,
+    adClickCmd,
     showEarningsCmd,
     toggleAdsCmd,
     { dispose: () => detector?.dispose() },
@@ -101,7 +130,7 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 export async function deactivate(): Promise<void> {
-  // Flush any pending impressions before shutdown
+  adFetchAbort?.abort();
   if (apiClient) {
     await apiClient.flushImpressions();
     apiClient.dispose();

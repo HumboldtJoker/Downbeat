@@ -28,9 +28,9 @@ export class StatusBarRenderer implements AdRenderer {
     this.statusBarItem.text = `$(megaphone) ${displayText}`;
     this.statusBarItem.tooltip = `Downbeat Ad — Click to learn more`;
     this.statusBarItem.command = {
-      command: 'vscode.open',
+      command: 'downbeat.adClick',
       title: 'Open Ad Link',
-      arguments: [vscode.Uri.parse(ad.url)],
+      arguments: [ad.url],
     };
   }
 

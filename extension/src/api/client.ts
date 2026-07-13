@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Ad } from '../rendering/types';
+import { AdTier } from '../detection/types';
 import {
   ImpressionRecord,
   EarningsResponse,
@@ -12,7 +13,7 @@ import {
  *
  * This client sends ONLY the following data to the Downbeat server:
  *   1. Ad fetch requests: contain only the API key header (no user data)
- *   2. Impression records: { impression_id, duration_ms, clicked }
+ *   2. Impression records: { impression_id, duration_ms, clicked, tier }
  *   3. Earnings queries: contain only the API key header (no user data)
  *
  * No terminal content, code, file paths, editor state, or any other
@@ -77,9 +78,10 @@ export class ApiClient {
   recordImpression(
     impressionId: string,
     durationMs: number,
+    tier: AdTier,
     clicked: boolean = false
   ): void {
-    this.pendingImpressions.push({ impressionId, durationMs, clicked });
+    this.pendingImpressions.push({ impressionId, durationMs, clicked, tier });
   }
 
   /**
@@ -110,6 +112,7 @@ export class ApiClient {
               impression_id: imp.impressionId,
               duration_ms: imp.durationMs,
               clicked: imp.clicked,
+              tier: imp.tier,
             })),
           }),
         }
