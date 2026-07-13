@@ -11,13 +11,23 @@ let currentImpressionId: string | undefined;
 let currentTier: AdTier = 'ambient';
 let adFetchAbort: AbortController | undefined;
 
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const config = vscode.workspace.getConfiguration('downbeat');
   let enabled = config.get<boolean>('enabled', true);
 
   detector = new CompositeDetector();
   renderer = new StatusBarRenderer();
-  apiClient = new ApiClient();
+
+  let apiKey = await context.secrets.get('downbeat.apiKey');
+  if (!apiKey) {
+    apiKey = config.get<string>('apiKey', '');
+    if (apiKey) {
+      await context.secrets.store('downbeat.apiKey', apiKey);
+      await config.update('apiKey', undefined, vscode.ConfigurationTarget.Global);
+    }
+  }
+
+  apiClient = new ApiClient(apiKey);
 
   apiClient.fetchEarnings().then((earnings) => {
     renderer?.showEarnings(earnings.today, earnings.total);
@@ -117,12 +127,28 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   );
 
+  const setKeyCmd = vscode.commands.registerCommand(
+    'downbeat.setApiKey',
+    async () => {
+      const key = await vscode.window.showInputBox({
+        prompt: 'Enter your Downbeat API key',
+        password: true,
+        placeHolder: 'db_...',
+      });
+      if (key) {
+        await context.secrets.store('downbeat.apiKey', key);
+        vscode.window.showInformationMessage('Downbeat API key saved securely.');
+      }
+    }
+  );
+
   context.subscriptions.push(
     startSub,
     stopSub,
     adClickCmd,
     showEarningsCmd,
     toggleAdsCmd,
+    setKeyCmd,
     { dispose: () => detector?.dispose() },
     { dispose: () => renderer?.dispose() },
     { dispose: () => apiClient?.dispose() }

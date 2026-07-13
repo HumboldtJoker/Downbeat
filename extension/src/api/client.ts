@@ -26,25 +26,20 @@ const FLUSH_INTERVAL_MS = 30_000;
 export class ApiClient {
   private apiUrl: string;
   private apiKey: string;
-
-  /**
-   * PRIVACY: This queue stores ONLY impression metadata:
-   * { impressionId, durationMs, clicked }
-   * No terminal content or user data is ever added to this queue.
-   */
   private pendingImpressions: ImpressionRecord[] = [];
   private flushTimer: ReturnType<typeof setInterval> | undefined;
 
-  constructor() {
+  constructor(apiKey?: string) {
     const config = vscode.workspace.getConfiguration('downbeat');
     this.apiUrl = config.get<string>('apiUrl', 'http://localhost:8000');
-    this.apiKey = config.get<string>('apiKey', '');
+    this.apiKey = apiKey || '';
 
-    // Auto-flush queued impressions every 30 seconds
+    if (this.apiUrl.startsWith('http://') && !this.apiUrl.includes('localhost') && !this.apiUrl.includes('127.0.0.1')) {
+      vscode.window.showWarningMessage('Downbeat: API URL uses HTTP (not HTTPS) for a non-localhost host. Your API key will be sent in cleartext.');
+    }
+
     this.flushTimer = setInterval(() => {
-      this.flushImpressions().catch(() => {
-        // Silently ignore flush errors — impressions stay queued for next attempt
-      });
+      this.flushImpressions().catch(() => {});
     }, FLUSH_INTERVAL_MS);
   }
 

@@ -27,6 +27,10 @@
       {
         "command": "downbeat.adClick",
         "title": "Downbeat: Open Ad"
+      },
+      {
+        "command": "downbeat.setApiKey",
+        "title": "Downbeat: Set API Key"
       }
     ],
     "configuration": {
