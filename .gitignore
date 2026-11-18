@@ -6,3 +6,7 @@ dist/
 .env.local
 __pycache__/
 *.pyc
+
+# Stray artifact from a hook bug (fixed 2026-08-06) that wrote a literal
+# Windows-path filename into whatever cwd the hook ran from.
+*vera_stop_capture.log
